@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Voice Recognition</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>D&D Voice Recognition</h1>
+        <div class="input-section">
+            <h2>Keywords</h2>
+            <p>Enter keywords below (one per line):</p>
+            <textarea id="keywords" rows="10" placeholder="Enter keywords here (one per line)
+Example:
+dragon
+goblin
+beholder"></textarea>
+            <div class="buttons">
+                <button id="startBtn">Start Listening</button>
+                <button id="stopBtn" disabled>Stop Listening</button>
+            </div>
+        </div>
+        <div class="status-section">
+            <div id="status">Not listening</div>
+            <div id="transcript"></div>
+            <div id="detected"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
