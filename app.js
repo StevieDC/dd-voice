@@ -1,4 +1,45 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // IndexedDB setup
+    let db;
+    const dbName = 'DnDVoiceDB';
+    const request = indexedDB.open(dbName, 1);
+
+    request.onerror = (event) => {
+        console.error('Database error:', event.target.error);
+    };
+
+    request.onupgradeneeded = (event) => {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains('keywords')) {
+            db.createObjectStore('keywords', { keyPath: 'id' });
+        }
+    };
+
+    request.onsuccess = (event) => {
+        db = event.target.result;
+        loadKeywords();
+    };
+
+    // Function to save keywords to IndexedDB
+    function saveKeywords(keywords) {
+        const transaction = db.transaction(['keywords'], 'readwrite');
+        const store = transaction.objectStore('keywords');
+        store.put({ id: 1, value: keywords });
+    }
+
+    // Function to load keywords from IndexedDB
+    function loadKeywords() {
+        const transaction = db.transaction(['keywords'], 'readonly');
+        const store = transaction.objectStore('keywords');
+        const request = store.get(1);
+
+        request.onsuccess = (event) => {
+            if (request.result) {
+                keywordsTextarea.value = request.result.value;
+            }
+        };
+    }
+
     // DOM elements
     const keywordsTextarea = document.getElementById('keywords');
     const startBtn = document.getElementById('startBtn');
@@ -6,6 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusElement = document.getElementById('status');
     const transcriptElement = document.getElementById('transcript');
     const detectedElement = document.getElementById('detected');
+
+    // Add event listener for keywords changes
+    keywordsTextarea.addEventListener('input', () => {
+        if (db) {
+            saveKeywords(keywordsTextarea.value);
+        }
+    });
 
     // Speech recognition setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
