@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isListening = false;
     let keywordsArray = [];
     let alertTimeout = null;
+    let isSpeaking = false;
 
     // Trigger alert when keyword is detected
     function triggerAlert(keyword) {
@@ -43,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(alertTimeout);
         }
 
+        // Stop listening while announcing
+        recognition.stop();
+        isListening = true; // Keep track that we should resume after
+
         // Visual alert
         document.body.classList.add('alert');
         
@@ -50,19 +55,41 @@ document.addEventListener('DOMContentLoaded', () => {
         detectedElement.textContent = `Detected: ${keyword}`;
 
         // Text to speech alert
-        speech.text = `${keyword} detected! Summoning ${keyword}`;
+        speech.text = `${keyword} detected, summoning ${keyword}`;
+        
+        // Handle speech end event
+        speech.onend = () => {
+            console.log('Speech ended, resetting alert');
+            resetAlert();
+        };
+
         try {
-            window.speechSynthesis.cancel();
+            window.speechSynthesis.cancel(); // Cancel any ongoing speech
             window.speechSynthesis.speak(speech);
         } catch (e) {
             console.error('Speech synthesis error:', e);
+            resetAlert();
+        }
+    }
+
+    // Function to reset the alert state
+    function resetAlert() {
+        console.log('Resetting alert state');
+        document.body.classList.remove('alert');
+        detectedElement.textContent = '';
+        window.speechSynthesis.cancel();
+        
+        // Clear any pending timeouts
+        if (alertTimeout) {
+            clearTimeout(alertTimeout);
         }
 
-        // Reset alert after 3 seconds
-        alertTimeout = setTimeout(() => {
-            document.body.classList.remove('alert');
-            detectedElement.textContent = '';
-        }, 3000);
+        // Resume listening if we were listening before
+        if (isListening) {
+            setTimeout(() => {
+                recognition.start();
+            }, 500); // Small delay before resuming listening
+        }
     }
 
     // Calculate Levenshtein distance for fuzzy matching
@@ -189,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopListening() {
         isListening = false;
         recognition.stop();
+        resetAlert();
 
         statusElement.textContent = 'Not listening';
         startBtn.disabled = false;
