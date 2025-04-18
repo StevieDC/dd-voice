@@ -6,7 +6,10 @@ This application listens to your voice and detects when you speak any of the key
 
 - Specify your own keywords in a text area
 - Voice recognition listens continuously
-- Detects exact matches and similar words (fuzzy matching)
+- Advanced keyword detection:
+  - Exact matches
+  - Fuzzy text matching
+  - Phonetic matching (detects similar-sounding words)
 - Visual alert (screen turns red) when keywords are detected
 - Audio alert using text-to-speech
 

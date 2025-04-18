@@ -65,30 +65,74 @@ document.addEventListener('DOMContentLoaded', () => {
         return matrix[b.length][a.length];
     }
 
-    // Fuzzy matching function
-    function findSimilarKeyword(word) {
-        if (!word || word.length < 3) return null;
+    // Helper function for phonetic matching
+    function getPhoneticCode(text) {
+        return natural.Metaphone.process(text);
+    }
 
-        word = word.toLowerCase();
-
-        // Check for exact match first
-        if (keywordsArray.includes(word)) {
-            return word;
-        }
-
-        // Check for fuzzy matches
+    // Updated keyword matching function with more lenient fuzzy matching and word combining
+    function findKeyword(text) {
+        if (!text) return null;
+        text = text.toLowerCase();
+        
+        // First try exact match
         for (const keyword of keywordsArray) {
-            // Skip short keywords for fuzzy matching (to avoid false positives)
-            if (keyword.length < 3) continue;
-
-            const distance = levenshteinDistance(keyword, word);
-            const threshold = Math.min(2, Math.floor(keyword.length / 3));
-
-            if (distance <= threshold) {
+            if (text.includes(keyword.toLowerCase())) {
+                console.log('Found exact keyword:', keyword);
                 return keyword;
             }
         }
 
+        // Remove spaces and try exact match again (for combined words)
+        const noSpaceText = text.replace(/\s+/g, '');
+        for (const keyword of keywordsArray) {
+            const noSpaceKeyword = keyword.toLowerCase().replace(/\s+/g, '');
+            if (noSpaceText.includes(noSpaceKeyword)) {
+                console.log('Found combined word match:', keyword);
+                return keyword;
+            }
+        }
+
+        // Try fuzzy matching with combined words and individual words
+        const words = text.split(/\s+/);
+        
+        // Try combinations of consecutive words
+        for (let i = 0; i < words.length; i++) {
+            for (let j = i + 1; j <= Math.min(i + 3, words.length); j++) {
+                const combinedWord = words.slice(i, j).join('');
+                
+                for (const keyword of keywordsArray) {
+                    if (keyword.length < 3) continue; // Skip short keywords
+                    
+                    const noSpaceKeyword = keyword.toLowerCase().replace(/\s+/g, '');
+                    const distance = levenshteinDistance(combinedWord, noSpaceKeyword);
+                    const maxDistance = Math.floor(Math.max(noSpaceKeyword.length, combinedWord.length) * 0.4); // 40% threshold
+                    
+                    if (distance <= maxDistance) {
+                        console.log('Found fuzzy combined match:', combinedWord, 'matches', keyword, 'with distance', distance);
+                        return keyword;
+                    }
+                }
+            }
+        }
+
+        // Try individual word fuzzy matching with more lenient threshold
+        for (const word of words) {
+            if (word.length < 3) continue; // Skip short words
+            
+            for (const keyword of keywordsArray) {
+                if (keyword.length < 3) continue; // Skip short keywords
+                
+                const distance = levenshteinDistance(word.toLowerCase(), keyword.toLowerCase());
+                const maxDistance = Math.floor(Math.max(keyword.length, word.length) * 0.4); // 40% threshold
+                
+                if (distance <= maxDistance) {
+                    console.log('Found fuzzy match:', word, 'matches', keyword, 'with distance', distance);
+                    return keyword;
+                }
+            }
+        }
+        
         return null;
     }
 
@@ -97,13 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Parse keywords
         keywordsArray = keywordsTextarea.value
             .split('\n')
-            .map(k => k.trim().toLowerCase())
+            .map(k => k.trim())
             .filter(k => k.length > 0);
 
         if (keywordsArray.length === 0) {
             alert('Please enter at least one keyword');
             return;
         }
+
+        console.log('Keywords loaded:', keywordsArray); // Debug logging
 
         isListening = true;
         recognition.start();
@@ -123,29 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         stopBtn.disabled = true;
     }
 
-    // Trigger alert when keyword is detected
-    function triggerAlert(keyword) {
-        // Clear any existing timeout
-        if (alertTimeout) {
-            clearTimeout(alertTimeout);
-        }
-
-        // Visual alert
-        document.body.classList.add('alert');
-
-        // Update detected keyword display
-        detectedElement.textContent = `Detected: ${keyword}`;
-
-        // Text to speech alert
-        speech.text = `${keyword} has been detected! Summoning ${keyword}`;
-        window.speechSynthesis.speak(speech);
-
-        // Reset alert after 3 seconds
-        alertTimeout = setTimeout(() => {
-            document.body.classList.remove('alert');
-        }, 3000);
-    }
-
     // Event listeners
     startBtn.addEventListener('click', startListening);
     stopBtn.addEventListener('click', stopListening);
@@ -153,26 +176,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Speech recognition events
     recognition.onresult = (event) => {
         let interimTranscript = '';
+        let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript.trim();
 
             if (event.results[i].isFinal) {
-                // Process final results
-                const words = transcript.toLowerCase().split(/\s+/);
+                finalTranscript += transcript;
+                console.log('Final transcript:', finalTranscript); // Debug logging
 
-                for (const word of words) {
-                    const matchedKeyword = findSimilarKeyword(word);
-                    if (matchedKeyword) {
-                        triggerAlert(matchedKeyword);
-                    }
+                // Check for keywords in the final transcript
+                const matchedKeyword = findKeyword(finalTranscript);
+                if (matchedKeyword) {
+                    console.log('Keyword match found:', matchedKeyword); // Debug logging
+                    triggerAlert(matchedKeyword);
                 }
             } else {
                 interimTranscript += transcript;
             }
         }
 
-        transcriptElement.textContent = interimTranscript;
+        transcriptElement.textContent = interimTranscript || finalTranscript;
     };
 
     recognition.onerror = (event) => {
