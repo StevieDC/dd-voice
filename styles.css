@@ -101,15 +101,4 @@ button:disabled {
     font-size: 0.5em;
     color: #666;
     vertical-align: super;
-<<<<<<< HEAD
-}
-
-#cancelBtn {
-    background-color: #dc3545;
-}
-
-#cancelBtn:hover {
-    background-color: #c82333;
-=======
->>>>>>> a66cb6cbb7ee0321febd2c7411e0b435537e6216
 }
