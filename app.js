@@ -34,6 +34,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let keywordsArray = [];
     let alertTimeout = null;
 
+    // Trigger alert when keyword is detected
+    function triggerAlert(keyword) {
+        console.log('Triggering alert for:', keyword);
+
+        // Clear any existing timeout
+        if (alertTimeout) {
+            clearTimeout(alertTimeout);
+        }
+
+        // Visual alert
+        document.body.classList.add('alert');
+        
+        // Update detected keyword display
+        detectedElement.textContent = `Detected: ${keyword}`;
+
+        // Text to speech alert
+        speech.text = `${keyword} detected! Summoning ${keyword}`;
+        try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(speech);
+        } catch (e) {
+            console.error('Speech synthesis error:', e);
+        }
+
+        // Reset alert after 3 seconds
+        alertTimeout = setTimeout(() => {
+            document.body.classList.remove('alert');
+            detectedElement.textContent = '';
+        }, 3000);
+    }
+
     // Calculate Levenshtein distance for fuzzy matching
     function levenshteinDistance(a, b) {
         if (a.length === 0) return b.length;
@@ -63,11 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return matrix[b.length][a.length];
-    }
-
-    // Helper function for phonetic matching
-    function getPhoneticCode(text) {
-        return natural.Metaphone.process(text);
     }
 
     // Updated keyword matching function with more lenient fuzzy matching and word combining
@@ -184,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.results[i].isFinal) {
                 finalTranscript += transcript;
                 console.log('Final transcript:', finalTranscript); // Debug logging
-
+                
                 // Check for keywords in the final transcript
                 const matchedKeyword = findKeyword(finalTranscript);
                 if (matchedKeyword) {
